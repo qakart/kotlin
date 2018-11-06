@@ -137,7 +137,7 @@ private object ReflectClassStructure {
                     for (annotation in annotations) {
                         val annotationType = annotation.annotationClass.java
                         visitor.visitParameterAnnotation(
-                                parameterIndex + shift, annotationType.classId, ReflectAnnotationSource(annotation)
+                            /*if (org.jetbrains.kotlin.load.kotlin.IS_BUILT_WITH_ASM6) */parameterIndex + shift /*else parameterIndex*/, annotationType.classId, ReflectAnnotationSource(annotation)
                         )?.let {
                             processAnnotationArguments(it, annotation, annotationType)
                         }

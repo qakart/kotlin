@@ -193,7 +193,7 @@ class BytecodeListingTextCollectingVisitor(val filter: Filter, val withSignature
             }
 
             @SuppressWarnings("VIRTUAL_MEMBER_HIDDEN")
-            /*override*/ fun visitAnnotableParameterCount(parameterCount: Int, visible: Boolean) {
+            override fun visitAnnotableParameterCount(parameterCount: Int, visible: Boolean) {
                 if (visible)
                     visibleAnnotableParameterCount = parameterCount
                 else {
