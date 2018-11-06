@@ -99,7 +99,7 @@ abstract class ScriptDependenciesLoader(
     }
 
     private fun attachReportsIfChanged(result: DependenciesResolver.ResolveResult) {
-        if (file.getUserData(IdeScriptReportSink.Reports) != result.reports) {
+        if (file.getUserData(IdeScriptReportSink.Reports) != result.reports.takeIf { it.isNotEmpty() }) {
             reporter.attachReports(file, result.reports)
         }
     }
