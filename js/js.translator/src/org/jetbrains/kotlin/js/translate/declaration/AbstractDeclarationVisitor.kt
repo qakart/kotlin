@@ -21,12 +21,7 @@ import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.PropertyDescriptor
 import org.jetbrains.kotlin.descriptors.isOverridable
 import org.jetbrains.kotlin.js.backend.ast.*
-import org.jetbrains.kotlin.js.backend.ast.metadata.coroutineMetadata
-import org.jetbrains.kotlin.js.backend.ast.metadata.isInlineableCoroutineBody
-import org.jetbrains.kotlin.js.descriptorUtils.shouldBeExported
-import org.jetbrains.kotlin.js.inline.util.FunctionWithWrapper
 import org.jetbrains.kotlin.js.translate.context.TranslationContext
-import org.jetbrains.kotlin.js.translate.expression.InlineMetadata
 import org.jetbrains.kotlin.js.translate.expression.translateAndAliasParameters
 import org.jetbrains.kotlin.js.translate.expression.translateFunction
 import org.jetbrains.kotlin.js.translate.expression.wrapWithInlineMetadata
@@ -34,7 +29,6 @@ import org.jetbrains.kotlin.js.translate.general.TranslatorVisitor
 import org.jetbrains.kotlin.js.translate.utils.*
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.resolve.descriptorUtil.isExtensionProperty
-import org.jetbrains.kotlin.resolve.source.getPsi
 
 abstract class AbstractDeclarationVisitor : TranslatorVisitor<Unit>()  {
     override fun emptyResult(context: TranslationContext) { }
@@ -100,44 +94,7 @@ abstract class AbstractDeclarationVisitor : TranslatorVisitor<Unit>()  {
             null
         }
 
-        if (descriptor.isSuspend && descriptor.isInline && descriptor.shouldBeExported(context.config) && functionAndContext != null) {
-            // Special case: function declaration should be split into two parts.
-            // First: state machine, will be exported and potentially used without inlining
-            // Second: Inliner-friendly declaration. Non-executable, used for inlining only.
-            val innerContext = functionAndContext.second
-            val inlineFunction = functionAndContext.first as JsFunction
-            val exportedFunction = inlineFunction.deepCopy()
-
-            // Prepare the noinline function, which will be transformed into a state machine and might be used from JS.
-            // All imported JsName's should be replaced with global imports
-            val block =
-                innerContext.inlineFunctionContext!!.let {
-                    JsBlock(
-                        it.importBlock.deepCopy().statements +
-                                it.prototypeBlock.deepCopy().statements +
-                                it.declarationsBlock.deepCopy().statements +
-                                JsReturn(exportedFunction)
-                    )
-                }
-            addFunction(descriptor, InlineMetadata.wrapFunction(context, FunctionWithWrapper(exportedFunction, block), descriptor.source.getPsi()), expression)
-
-//            val exportedFunction = innerContext.inlineFunctionContext!!.imports.entries.associate { (tag, name) ->
-//                name.descriptor.let {
-//                    name to context.getInnerNameForDescriptor(it)
-//                } ?: {
-//                    context.getInnerNameForDescriptor()
-//                }
-//            }.rename(inlineFunction.deepCopy())
-//            addFunction(descriptor, exportedFunction, expression)
-
-            // Yield the inline function declaration. Make sure it doesn't get transformed into a state machine.
-            inlineFunction.name = null
-            inlineFunction.coroutineMetadata = null
-            inlineFunction.isInlineableCoroutineBody = true
-            context.addDeclarationStatement(innerContext.wrapWithInlineMetadata(context, inlineFunction, descriptor).makeStmt())
-        } else {
-            addFunction(descriptor, functionAndContext?.first, expression)
-        }
+        addFunction(descriptor, functionAndContext?.first, expression)
     }
 
     override fun visitTypeAlias(typeAlias: KtTypeAlias, data: TranslationContext?) {}
@@ -159,14 +116,8 @@ abstract class AbstractDeclarationVisitor : TranslatorVisitor<Unit>()  {
             function.body.statements += FunctionBodyTranslator.setDefaultValueForArguments(descriptor, innerContext)
         }
         innerContext.translateFunction(expression, function)
-        val result = if (descriptor.isSuspend && descriptor.shouldBeExported(context.config)) {
-            function
-        }
-        else {
-            innerContext.wrapWithInlineMetadata(context, function, descriptor)
-        }
 
-        return Pair(result, innerContext)
+        return Pair(innerContext.wrapWithInlineMetadata(context, function, descriptor), innerContext)
     }
 
     // used from kotlinx.serialization
