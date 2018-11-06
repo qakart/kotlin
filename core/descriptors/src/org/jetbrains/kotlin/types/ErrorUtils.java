@@ -142,19 +142,7 @@ public class ErrorUtils {
         };
     }
 
-    public static boolean containsErrorType(@NotNull CallableDescriptor callableDescriptor) {
-        if (callableDescriptor instanceof FunctionDescriptor) {
-            return containsErrorType((FunctionDescriptor) callableDescriptor);
-        }
-        else {
-            return containsErrorType(callableDescriptor.getReturnType());
-        }
-    }
-
     public static boolean containsErrorType(@NotNull FunctionDescriptor function) {
-        if (containsErrorType(function.getReturnType())) {
-            return true;
-        }
         ReceiverParameterDescriptor receiverParameter = function.getExtensionReceiverParameter();
         if (receiverParameter != null && containsErrorType(receiverParameter.getType())) {
             return true;

@@ -55,7 +55,9 @@ class OverloadChecker(val specificityComparator: TypeSpecificityComparator) {
         // They can be disambiguated by providing explicit type parameters.
         if (a.typeParameters.isEmpty() != b.typeParameters.isEmpty()) return true
 
-        if (ErrorUtils.containsErrorType(a) || ErrorUtils.containsErrorType(b)) return true
+        if (a is FunctionDescriptor && ErrorUtils.containsErrorType(a) ||
+            b is FunctionDescriptor && ErrorUtils.containsErrorType(b)
+        ) return true
         if (a.varargParameterPosition() != b.varargParameterPosition()) return true
 
         val aSignature = FlatSignature.createFromCallableDescriptor(a)
